@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Points Entry - Auskick Supercoach</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #00A65A;
+            --secondary-color: #FFC107;
+            --accent-color: #3D5AFE;
+            --danger-color: #dc3545;
+            --danger-hover-color: #c82333;
+            --background-color: #F0F4F8;
+            --text-color: #333;
+            --card-background: #ffffff;
+            --white-color: #ffffff;
+        }
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+        }
+        header {
+            background-color: var(--accent-color);
+            color: var(--white-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        header h1 { margin: 0; }
+        .back-link {
+            color: var(--white-color);
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .back-link:hover { background: rgba(255,255,255,0.4); }
+        main {
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            gap: 1.5rem;
+        }
+        @media(min-width: 900px) {
+            main { flex-direction: row; }
+        }
+        .player-list-container {
+            flex: 1;
+            background: var(--card-background);
+            border-radius: 20px;
+            padding: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            max-height: 40vh;
+            overflow-y: auto;
+        }
+        @media(min-width: 900px) {
+            .player-list-container { max-height: 80vh; }
+        }
+        .player-list-container h2 {
+            margin-top: 0;
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--background-color);
+            padding-bottom: 0.5rem;
+        }
+        .player-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: 2px solid transparent;
+        }
+        .player-item:hover {
+            background-color: var(--background-color);
+        }
+        .player-item.selected {
+            background-color: #dbeaff;
+            border-color: var(--accent-color);
+        }
+        .player-item img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            background-color: #eee;
+        }
+        .player-info { flex-grow: 1; }
+        .player-name { font-weight: 700; }
+        .player-team { font-size: 0.8rem; color: #666; }
+        .player-points {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .scoring-panel {
+            flex: 2;
+            background: var(--card-background);
+            border-radius: 20px;
+            padding: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        .scoring-panel h2 {
+            margin-top: 0;
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--background-color);
+            padding-bottom: 0.5rem;
+        }
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 0.75rem;
+        }
+        .action-btn {
+            background-color: #e9ecef;
+            color: var(--text-color);
+            border: none;
+            padding: 0.75rem;
+            border-radius: 10px;
+            text-align: left;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .action-btn:hover { background-color: #ced4da; }
+        .action-btn:active { transform: scale(0.98); }
+        .action-points {
+            font-weight: 700;
+            font-size: 1.1rem;
+            background: var(--accent-color);
+            color: var(--white-color);
+            padding: 0.2rem 0.5rem;
+            border-radius: 5px;
+        }
+        
+        .danger-btn {
+            width: 100%;
+            background-color: var(--danger-color);
+            color: var(--white-color);
+            border: none;
+            border-radius: 15px;
+            padding: 0.8rem 1.5rem;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .danger-btn:hover {
+            background-color: var(--danger-hover-color);
+        }
+        
+        /* Color coding for buttons */
+        .action-btn.goal { background-color: #dbfff0; }
+        .action-btn.mark { background-color: #dbeaff; }
+        .action-btn.possession { background-color: #fff9db; }
+        .action-btn.defence { background-color: #ffdbdb; }
+
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📈 Points Entry</h1>
+        <a href="./index.html" class="back-link">← Back to Team</a>
+    </header>
+    <main>
+        <div class="player-list-container">
+            <h2>Select Player</h2>
+            <div id="player-list">
+                </div>
+        </div>
+        <div class="scoring-panel">
+            <h2>Award Points</h2>
+            <div id="actions-grid" class="actions-grid">
+                </div>
+            <hr style="margin: 1.5rem 0 1rem 0; border: 1px solid var(--background-color); border-top: none;">
+            <button id="reset-scores-btn" class="danger-btn">Reset All Scores</button>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const playerListEl = document.getElementById('player-list');
+            const actionsGridEl = document.getElementById('actions-grid');
+            const resetScoresBtn = document.getElementById('reset-scores-btn');
+            
+            let userTeam = [];
+            let selectedPlayerId = null;
+
+            const scoringActions = [
+                { name: 'Goal', points: 8, cat: 'goal' },
+                { name: 'Behind', points: 1, cat: 'goal' },
+                { name: 'Score Assist', points: 3, cat: 'goal' },
+                { name: 'Intercept Contested Mark', points: 8, cat: 'mark' },
+                { name: 'Contested Mark', points: 6, cat: 'mark' },
+                { name: 'Mark on a Lead', points: 5, cat: 'mark' },
+                { name: 'Uncontested Mark', points: 2, cat: 'mark' },
+                { name: 'Contested Possession', points: 4.5, cat: 'possession' },
+                { name: 'Intercept Possession', points: 4.5, cat: 'possession' },
+                { name: 'Handball Received', points: 1.5, cat: 'possession' },
+                { name: 'Gather', points: 1.5, cat: 'possession' },
+                { name: 'Effective Kick', points: 4, cat: 'possession' },
+                { name: 'Effective Handball', points: 1.5, cat: 'possession' },
+                { name: 'Free Kick', points: 4, cat: 'defence' },
+                { name: 'Tackle', points: 4, cat: 'defence' },
+                { name: 'Spoil', points: 2, cat: 'defence' },
+                { name: 'Shepherd', points: 1.5, cat: 'defence' },
+                { name: 'Hit Out to Advantage', points: 5, cat: 'goal' }
+            ];
+
+            function loadTeam() {
+                const savedTeam = localStorage.getItem('userTeam');
+                if (savedTeam) {
+                    userTeam = JSON.parse(savedTeam);
+                } else {
+                    playerListEl.innerHTML = '<p>No team data found. Please set up your team on the main page first.</p>';
+                }
+            }
+
+            function saveTeam() {
+                localStorage.setItem('userTeam', JSON.stringify(userTeam));
+            }
+
+            function renderPlayerList() {
+                playerListEl.innerHTML = '';
+                userTeam.sort((a,b) => a.name.localeCompare(b.name)).forEach(player => {
+                    const playerEl = document.createElement('div');
+                    playerEl.className = 'player-item';
+                    playerEl.dataset.playerId = player.id;
+                    if(player.id === selectedPlayerId) {
+                        playerEl.classList.add('selected');
+                    }
+
+                    // Use a placeholder for null images to maintain layout
+                    const imgSrc = player.image || 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+
+                    playerEl.innerHTML = `
+                        <img src="${imgSrc}" alt="Player photo">
+                        <div class="player-info">
+                            <div class="player-name">${player.name}</div>
+                            <div class="player-team">${player.team}</div>
+                        </div>
+                        <div class="player-points" id="points-for-${player.id}">${Math.round(player.points)}</div>
+                    `;
+                    playerEl.addEventListener('click', () => {
+                        selectedPlayerId = player.id;
+                        // Re-render to update selection highlight
+                        document.querySelectorAll('.player-item').forEach(el => el.classList.remove('selected'));
+                        playerEl.classList.add('selected');
+                    });
+                    playerListEl.appendChild(playerEl);
+                });
+            }
+
+            function renderActionButtons() {
+                actionsGridEl.innerHTML = '';
+                scoringActions.forEach(action => {
+                    const btn = document.createElement('button');
+                    btn.className = `action-btn ${action.cat}`;
+                    btn.dataset.points = action.points;
+                    btn.innerHTML = `
+                        <span>${action.name}</span>
+                        <span class="action-points">+${action.points}</span>
+                    `;
+                    btn.addEventListener('click', () => {
+                        if (selectedPlayerId === null) {
+                            alert('Please select a player first!');
+                            return;
+                        }
+                        const player = userTeam.find(p => p.id === selectedPlayerId);
+                        if(player) {
+                            player.points += action.points;
+                            document.getElementById(`points-for-${player.id}`).textContent = Math.round(player.points);
+                            saveTeam();
+                        }
+                    });
+                    actionsGridEl.appendChild(btn);
+                });
+            }
+
+            resetScoresBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to reset all player scores to zero? This cannot be undone.')) {
+                    userTeam.forEach(player => player.points = 0);
+                    saveTeam();
+                    renderPlayerList();
+                    alert('All player scores have been set back to zero.');
+                }
+            });
+
+
+            // --- INITIALIZATION ---
+            loadTeam();
+            renderPlayerList();
+            renderActionButtons();
+        });
+    </script>
+</body>
+</html>

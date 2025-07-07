@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auskick Supercoach - Drouin Auskick</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- Global Styles & Variables --- */
+        :root {
+            --primary-color: #00A65A; /* Footy field green */
+            --secondary-color: #FFC107; /* Bright yellow */
+            --accent-color: #3D5AFE; /* Bold blue */
+            --danger-color: #dc3545;
+            --danger-hover-color: #c82333;
+            --background-color: #F0F4F8; /* Light grey-blue */
+            --text-color: #333;
+            --card-background: #ffffff;
+            --white-color: #ffffff;
+            --trade-btn-color: #6c757d;
+        }
+
+        /* --- Basic Setup --- */
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--accent-color);
+            color: var(--white-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        header .logo h1 {
+            margin: 0;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 700;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: clamp(0.9rem, 3vw, 1.1rem);
+        }
+
+        .user-info span {
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+
+        /* --- Main Layout --- */
+        main {
+            display: flex;
+            flex-direction: column;
+            lg:flex-direction: row;
+            flex: 1;
+            padding: 1rem;
+            gap: 1.5rem;
+        }
+
+        .main-content {
+            flex: 3;
+            min-width: 0;
+        }
+
+        /* --- Team Header --- */
+        #team-header {
+            display: flex;
+            flex-direction: column;
+            sm:flex-row;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+
+        #team-header h2 {
+            font-size: clamp(1.8rem, 5vw, 2.5rem);
+            color: var(--accent-color);
+            margin: 0;
+        }
+
+        .team-info-container {
+            text-align: center;
+            sm:text-right;
+            background-color: var(--card-background);
+            padding: 0.75rem 1.25rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .team-info-container h3 {
+            margin: 0 0 0.5rem 0;
+            font-size: clamp(1.1rem, 3vw, 1.3rem);
+        }
+        
+        .salary-info {
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        /* --- Footy Field & Player Cards --- */
+        #footy-field {
+            background: var(--primary-color);
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.1) 2px, transparent 2px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.1) 2px, transparent 2px);
+            background-size: 100px 100px;
+            border-radius: 20px;
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1.5rem;
+            min-height: 50vh;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.2);
+        }
+
+        .player-card {
+            background-color: var(--card-background);
+            border-radius: 15px;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 3px solid transparent;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden; /* Ensures guernsey design stays within card */
+            position: relative; /* For positioning the camera button */
+        }
+
+        .player-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        /* --- NEW: Camera Button --- */
+        .camera-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.4);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            z-index: 5;
+        }
+        .camera-btn:hover {
+            background: rgba(0,0,0,0.6);
+        }
+        
+        /* --- Profile Picture & Guernsey Styles --- */
+        .profile-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            height: 50px;
+            width: 50px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .player-photo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent-color);
+        }
+
+        .guernsey-icon {
+            width: 50px;
+            height: 50px;
+            position: relative;
+            border-radius: 15px 15px 5px 5px; /* Rounded top for shoulders */
+            box-shadow: inset 0 -3px 5px rgba(0,0,0,0.2);
+            overflow: hidden; /* To contain the design */
+        }
+
+        /* V-neck for the guernsey */
+        .guernsey-icon::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 15px 15px 0 15px;
+            border-color: var(--card-background) transparent transparent transparent;
+            z-index: 2; /* Make sure neck is on top */
+        }
+
+        .player-card .player-team {
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #888;
+        }
+
+        .player-card .player-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+
+        .player-card .player-pos {
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.2rem 0.6rem;
+            border-radius: 10px;
+            color: var(--white-color);
+            display: inline-block;
+        }
+
+        .pos-fwd { background-color: #E91E63; }
+        .pos-mid { background-color: #FF9800; }
+        .pos-def { background-color: #2196F3; }
+
+        .player-card .player-points {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-top: 0.5rem;
+        }
+        
+        .player-card .player-price {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--primary-color);
+            margin-top: 0.25rem;
+        }
+
+        .player-card .player-skill {
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            font-style: italic;
+            color: #666;
+        }
+        
+        .player-card .trade-btn {
+            background-color: var(--trade-btn-color);
+            color: var(--white-color);
+            font-size: 0.9rem;
+            padding: 0.4rem 0.8rem;
+            margin-top: 1rem;
+            border-radius: 10px;
+        }
+        
+        .player-card .trade-btn:hover {
+            background-color: #5a6268;
+        }
+
+        /* --- Sidebar & Widgets --- */
+        .sidebar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .widget {
+            background-color: var(--card-background);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .widget h3 {
+            margin-top: 0;
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--background-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .league-ladder ol {
+            padding-left: 1.5rem;
+            margin: 0;
+        }
+
+        .league-ladder li {
+            padding: 0.5rem 0;
+            font-size: 1.1rem;
+        }
+
+        .league-ladder li:first-child {
+            font-weight: 700;
+            color: #D4AF37; /* Gold */
+        }
+
+        /* --- Buttons --- */
+        button, .button-link {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 15px;
+            padding: 0.8rem 1.5rem;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .button-link:hover {
+             background-color: #ffca28;
+             transform: translateY(-2px);
+             color: var(--text-color);
+        }
+
+
+        button:hover {
+            background-color: #ffca28;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        .danger-btn {
+            background-color: var(--danger-color);
+            color: var(--white-color);
+        }
+        .danger-btn:hover {
+            background-color: var(--danger-hover-color);
+            color: var(--white-color);
+        }
+
+        /* --- Footer --- */
+        footer {
+            background-color: #333;
+            color: var(--white-color);
+            text-align: center;
+            padding: 1rem;
+            margin-top: auto;
+        }
+
+        /* --- Modal Styles --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 1000;
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--white-color);
+            padding: 2rem;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal-overlay.visible .modal-content {
+            transform: scale(1);
+        }
+
+        /* Modal content sections */
+        .notification-view, .camera-view {
+            display: none;
+        }
+        .notification-view.active, .camera-view.active {
+            display: block;
+        }
+
+        .modal-content h2 {
+            color: var(--accent-color);
+            margin-top: 0;
+            font-size: 1.8rem;
+        }
+
+        .modal-content p {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        /* --- NEW: Camera View Styles --- */
+        #camera-stream {
+            width: 100%;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+            transform: scaleX(-1); /* Mirror view */
+        }
+        #photo-canvas {
+            display: none; /* Hidden canvas for processing */
+        }
+        .camera-controls {
+            display: flex;
+            gap: 1rem;
+        }
+        #capture-btn {
+            background-color: var(--primary-color);
+            color: var(--white-color);
+        }
+        #cancel-btn {
+            background-color: var(--trade-btn-color);
+            color: var(--white-color);
+        }
+        
+        #modal-close-btn {
+            background-color: var(--accent-color);
+            color: var(--white-color);
+        }
+        
+        /* Responsive Adjustments */
+        @media (min-width: 1024px) {
+            main {
+                flex-direction: row;
+            }
+        }
+        
+        @media (min-width: 640px) {
+            #team-header {
+                flex-direction: row;
+            }
+            .team-info-container {
+                text-align: right;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>🏉 Auskick Supercoach</h1>
+        </div>
+        <div class="user-info">
+            <span>Team: Drouin Auskick</span>
+            <span id="footy-coins">🪙 Coins: 5000000</span>
+        </div>
+    </header>
+
+    <main>
+        <div class="main-content">
+            <div id="team-header">
+                <h2>My Team</h2>
+                <div class="team-info-container">
+                    <h3>Total Points: <span id="total-points">0</span></h3>
+                    <div class="salary-info">
+                        Team Salary: $<span id="team-salary">0</span>k / $<span id="salary-cap">0</span>k
+                    </div>
+                </div>
+            </div>
+            <div id="footy-field">
+                </div>
+        </div>
+
+
+        <aside class="sidebar">
+             <div class="scoring widget">
+                <h3>📈 Live Scoring</h3>
+                <p>Award points to your players now!</p>
+                <a href="./points_entry.html" class="button-link">Score Points</a>
+            </div>
+            <div class="league-ladder widget">
+                <h3>🏆 League Ladder</h3>
+                <ol>
+                    <li>Drouin Auskick</li>
+                    <li>Warragul Warriors</li>
+                    <li>Neerim South Ninjas</li>
+                    <li>Yarragon Yetis</li>
+                </ol>
+            </div>
+            <div class="player-packs widget">
+                <h3>🎁 Player Packs</h3>
+                <p>Get new players for your team!</p>
+                <button>Buy Pack (50 Coins)</button>
+            </div>
+             <div class="mini-games widget">
+                <h3>🎮 Mini Games</h3>
+                <p>Play games to win more coins!</p>
+                <button>Goal Kick Challenge</button>
+            </div>
+             <div class="settings-widget widget">
+                <h3>⚙️ Settings</h3>
+                <button id="reset-scores-btn" class="danger-btn">Reset All Scores</button>
+            </div>
+        </aside>
+    </main>
+
+    <footer>
+        <p>Auskick Supercoach - The next generation of superstars!</p>
+    </footer>
+
+    <div id="notification-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="notification-view" class="notification-view active">
+                <h2 id="modal-title">Round Complete!</h2>
+                <p id="modal-message">Check out your team's new scores!</p>
+                <button id="modal-close-btn">Awesome!</button>
+            </div>
+            <div id="camera-view" class="camera-view">
+                <h2>Set Player Photo</h2>
+                <video id="camera-stream" autoplay playsinline></video>
+                <canvas id="photo-canvas"></canvas>
+                <div class="camera-controls">
+                    <button id="capture-btn">📸 Capture</button>
+                    <button id="cancel-btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CONSTANTS ---
+            const SALARY_CAP = 1000000;
+
+            // --- DATA ---
+            const TEAMS = {
+                'Adelaide': { primary: '#002B5C', secondary: '#E21937', third: '#FFD200', design: 'hoops' },
+                'Brisbane': { primary: '#A30046', secondary: '#0055A3', third: '#FDBE57', design: 'solid' },
+                'Carlton': { primary: '#031A29', secondary: '#FFFFFF', design: 'monogram' },
+                'Collingwood': { primary: '#000000', secondary: '#FFFFFF', design: 'stripes' },
+                'Essendon': { primary: '#000000', secondary: '#CC2031', design: 'sash' },
+                'Fremantle': { primary: '#2A1A53', secondary: '#FFFFFF', design: 'chevrons' },
+                'Geelong': { primary: '#002F6C', secondary: '#FFFFFF', design: 'hoops' },
+                'Gold Coast': { primary: '#E51F33', secondary: '#00A651', third: '#FFC107', design: 'solid' },
+                'GWS': { primary: '#F15C22', secondary: '#000000', design: 'solid' },
+                'Hawthorn': { primary: '#4D2004', secondary: '#FDB913', design: 'stripes' },
+                'Melbourne': { primary: '#0F1131', secondary: '#ED1C24', design: 'yoke' },
+                'North Melbourne': { primary: '#003E92', secondary: '#FFFFFF', design: 'stripes' },
+                'Port Adelaide': { primary: '#008AAB', secondary: '#000000', third: '#FFFFFF', design: 'solid' },
+                'Richmond': { primary: '#000000', secondary: '#FFD200', design: 'sash' },
+                'St Kilda': { primary: '#ED1B2F', secondary: '#000000', third: '#FFFFFF', design: 'panels' },
+                'Sydney': { primary: '#ED1B2F', secondary: '#FFFFFF', design: 'yoke' },
+                'West Coast': { primary: '#062ee2', secondary: '#FDB913', design: 'solid' },
+                'Western Bulldogs': { primary: '#005A9C', secondary: '#ED1B2F', third: '#FFFFFF', design: 'hoop' }
+            };
+
+            const defaultTeam = [
+                { id: 1, name: 'Jackson', team: 'Carlton', position: 'Midfielder', skill: 'Marker', points: 18, price: 100, posClass: 'pos-mid', image: null },
+                { id: 2, name: 'Ashton', team: 'Carlton', position: 'Forward', skill: 'Goal Sneak', points: 4, price: 99, posClass: 'pos-fwd', image: null },
+                { id: 3, name: 'Mackenzie', team: 'Western Bulldogs', position: 'Defender', skill: 'Tackle Machine', points: 4, price: 99, posClass: 'pos-def', image: null },
+                { id: 4, name: 'Caylee', team: 'Geelong', position: 'Midfielder', skill: 'Ball Magnet', points: 10, price: 100, posClass: 'pos-mid', image: null },
+                { id: 5, name: 'Kalani', team: 'Geelong', position: 'Forward', skill: 'Big Clunk', points: 3, price: 99, posClass: 'pos-fwd', image: null },
+                { id: 6, name: 'Liam', team: 'Hawthorn', position: 'Defender', skill: 'Rebound King', points: 8, price: 99.5, posClass: 'pos-def', image: null },
+                { id: 7, name: 'C. Petracca', team: 'Melbourne', position: 'Midfielder', skill: 'Speed Burst', points: 97, price: 95, posClass: 'pos-mid', image: null },
+                { id: 8, name: 'J. Cameron', team: 'Geelong', position: 'Forward', skill: 'Long Ranger', points: 88, price: 78, posClass: 'pos-fwd', image: null },
+                { id: 9, name: 'N. Naitanui', team: 'West Coast', position: 'Defender', skill: 'High Flyer', points: 99, price: 60, posClass: 'pos-def', image: null },
+                { id: 10, name: 'P. Cripps', team: 'Carlton', position: 'Midfielder', skill: 'Clearance Pro', points: 187, price: 88, posClass: 'pos-mid', image: null },
+                { id: 11, name: 'C. Curnow', team: 'Carlton', position: 'Forward', skill: 'Sharp Shooter', points: 166, price: 182, posClass: 'pos-fwd', image: null },
+                { id: 12, name: 'S. Bolton', team: 'Richmond', position: 'Midfielder', skill: 'Live Wire', points: 1, price: 77, posClass: 'pos-mid', image: null },
+                { id: 13, name: 'T. Stewart', team: 'Geelong', position: 'Defender', skill: 'Interceptor', points: 50, price: 72, posClass: 'pos-def', image: null },
+                { id: 14, name: 'M. Bontempelli', team: 'Western Bulldogs', position: 'Midfielder', skill: 'The Bont', points: 145, price: 100, posClass: 'pos-mid', image: null },
+                { id: 15, name: 'T. Greene', team: 'GWS', position: 'Forward', skill: 'Match Winner', points: 66, price: 83, posClass: 'pos-fwd', image: null },
+                { id: 16, name: 'J. Sinclair', team: 'St Kilda', position: 'Defender', skill: 'Run & Gun', points: 100, price: 68, posClass: 'pos-def', image: null },
+            ];
+
+            let userTeam = [];
+            let tradePool = [
+                 { id: 17, name: 'Z. Butters', team: 'Port Adelaide', position: 'Midfielder', skill: 'Class Act', points: 100, price: 92, posClass: 'pos-mid', image: null },
+                { id: 18, name: 'H. McKay', team: 'Carlton', position: 'Forward', skill: 'Big Harry', points: 200, price: 75, posClass: 'pos-fwd', image: null },
+                { id: 19, name: 'S. Walsh', team: 'Carlton', position: 'Midfielder', skill: 'Endurance', points: 198, price: 85, posClass: 'pos-mid', image: null },
+                { id: 20, name: 'J. Lever', team: 'Melbourne', position: 'Defender', skill: 'The Picket', points: 2, price: 62, posClass: 'pos-def', image: null },
+                { id: 21, name: 'I. Heeney', team: 'Sydney', position: 'Forward', skill: 'Star Power', points: 87, price: 81, posClass: 'pos-fwd', image: null },
+                { id: 22, name: 'C. Rozee', team: 'Port Adelaide', position: 'Midfielder', skill: 'Electric', points: 77, price: 89, posClass: 'pos-mid', image: null },
+            ];
+            
+            let currentStream = null;
+            let currentPlayerIdForPhoto = null;
+
+            // --- ELEMENTS ---
+            const footyField = document.getElementById('footy-field');
+            const totalPointsEl = document.getElementById('total-points');
+            const teamSalaryEl = document.getElementById('team-salary');
+            const salaryCapEl = document.getElementById('salary-cap');
+            const modal = document.getElementById('notification-modal');
+            const notificationView = document.getElementById('notification-view');
+            const cameraView = document.getElementById('camera-view');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+            const videoEl = document.getElementById('camera-stream');
+            const canvasEl = document.getElementById('photo-canvas');
+            const captureBtn = document.getElementById('capture-btn');
+            const cancelBtn = document.getElementById('cancel-btn');
+            const resetScoresBtn = document.getElementById('reset-scores-btn');
+
+
+            // --- FUNCTIONS ---
+            
+            /**
+            * Saves the current user team to local storage.
+            */
+            function saveTeam() {
+                localStorage.setItem('userTeam', JSON.stringify(userTeam));
+            }
+
+            /**
+            * Loads the user team from local storage or sets a default.
+            */
+            function loadTeam() {
+                const savedTeam = localStorage.getItem('userTeam');
+                userTeam = savedTeam ? JSON.parse(savedTeam) : defaultTeam;
+                saveTeam(); // Save the default team if it's the first time
+            }
+
+            /**
+             * Generates the background style for a guernsey based on team design.
+             */
+            function getGuernseyStyle(team) {
+                const colors = TEAMS[team];
+                if (!colors) return `background-color: #cccccc;`; // Default grey
+
+                switch (colors.design) {
+                    case 'stripes':
+                        return `background: repeating-linear-gradient(90deg, ${colors.primary}, ${colors.primary} 10px, ${colors.secondary} 10px, ${colors.secondary} 20px);`;
+                    case 'sash':
+                        return `background: linear-gradient(45deg, ${colors.primary} 45%, ${colors.secondary} 45%, ${colors.secondary} 55%, ${colors.primary} 55%);`;
+                    case 'hoops':
+                        return `background: repeating-linear-gradient(180deg, ${colors.primary}, ${colors.primary} 10px, ${colors.secondary} 10px, ${colors.secondary} 20px);`;
+                    case 'yoke':
+                        return `background: linear-gradient(180deg, ${colors.secondary} 30%, ${colors.primary} 30%);`;
+                    case 'chevrons':
+                        return `background: linear-gradient(135deg, ${colors.primary} 25%, ${colors.secondary} 25%, ${colors.secondary} 50%, ${colors.primary} 50%, ${colors.primary} 75%, ${colors.secondary} 75%); background-size: 20px 20px;`;
+                    case 'panels':
+                        return `background: linear-gradient(90deg, ${colors.primary} 33%, ${colors.third} 33%, ${colors.third} 66%, ${colors.secondary} 66%);`;
+                     case 'hoop':
+                        return `background: linear-gradient(180deg, ${colors.secondary} 25%, ${colors.third} 25%, ${colors.third} 75%, ${colors.secondary} 75%); border: 4px solid ${colors.primary};`;
+                    default: // solid or monogram
+                        return `background-color: ${colors.primary};`;
+                }
+            }
+
+            /**
+             * Renders the player cards and updates all team info displays.
+             */
+            function renderTeam() {
+                footyField.innerHTML = ''; 
+                let currentTotalPoints = 0;
+                let currentTeamSalary = 0;
+
+                userTeam.forEach(player => {
+                    currentTotalPoints += player.points;
+                    currentTeamSalary += player.price;
+
+                    const card = document.createElement('div');
+                    card.className = 'player-card';
+                    card.dataset.playerId = player.id;
+                    
+                    const guernseyStyle = getGuernseyStyle(player.team);
+                    const profileImage = player.image
+                        ? `<img src="${player.image}" alt="${player.name}" class="player-photo">`
+                        : `<div class="guernsey-icon" style="${guernseyStyle}"></div>`;
+
+                    card.innerHTML = `
+                        <button class="camera-btn" data-player-id="${player.id}">📸</button>
+                        <div>
+                            <div class="profile-container">
+                                ${profileImage}
+                            </div>
+                            <div class="player-team">${player.team}</div>
+                            <div class="player-name">${player.name}</div>
+                            <div class="player-price">$${player.price}k</div>
+                            <div class="player-points">${Math.round(player.points)}</div>
+                            <div class="player-skill">✨ ${player.skill}</div>
+                        </div>
+                        <button class="trade-btn" data-player-id="${player.id}">Trade</button>
+                    `;
+                    footyField.appendChild(card);
+                });
+
+                // Update displays
+                totalPointsEl.textContent = Math.round(currentTotalPoints);
+                teamSalaryEl.textContent = currentTeamSalary.toFixed(1);
+                salaryCapEl.textContent = SALARY_CAP;
+            }
+
+            /**
+             * Handles the logic for trading a player, including salary cap check.
+             */
+            function handleTrade(playerIdToTrade) {
+                if (tradePool.length === 0) {
+                    showNotificationModal('Trade Failed', 'There are no more players available to trade!');
+                    return;
+                }
+
+                const playerOutIndex = userTeam.findIndex(p => p.id === playerIdToTrade);
+                if (playerOutIndex === -1) return;
+
+                const playerOut = userTeam[playerOutIndex];
+                const currentSalary = userTeam.reduce((total, p) => total + p.price, 0);
+                const salaryAfterTradeOut = currentSalary - playerOut.price;
+
+                const newPlayerIndex = Math.floor(Math.random() * tradePool.length);
+                const newPlayer = tradePool[newPlayerIndex];
+
+                if (salaryAfterTradeOut + newPlayer.price > SALARY_CAP) {
+                    showNotificationModal('Trade Denied!', `You can't afford <strong>${newPlayer.name}</strong>. You need to free up more cash!`);
+                    return;
+                }
+                
+                newPlayer.points = 0;
+
+                userTeam[playerOutIndex] = newPlayer;
+                tradePool.splice(newPlayerIndex, 1);
+                tradePool.push(playerOut);
+                
+                saveTeam(); // Save after trade
+                renderTeam();
+                showNotificationModal('Trade Successful!', `You traded <strong>${playerOut.name}</strong> for <strong>${newPlayer.name}</strong>!`);
+            }
+            
+            /**
+             * Shows the notification modal.
+             */
+            function showNotificationModal(title, message) {
+                cameraView.classList.remove('active');
+                notificationView.classList.add('active');
+                modalTitle.textContent = title;
+                modalMessage.innerHTML = message;
+                modal.classList.add('visible');
+            }
+
+            /**
+             * Stops any active camera stream.
+             */
+            function stopCamera() {
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                    currentStream = null;
+                }
+            }
+
+            /**
+             * Hides the modal and stops the camera if it's running.
+             */
+            function hideModal() {
+                modal.classList.remove('visible');
+                stopCamera();
+            }
+
+            /**
+             * Starts the camera and shows the camera modal view.
+             */
+            async function startCamera(playerId) {
+                if (!('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices)) {
+                    showNotificationModal('Camera Error', 'Sorry, your browser does not support camera access.');
+                    return;
+                }
+
+                currentPlayerIdForPhoto = playerId;
+
+                try {
+                    const constraints = { video: { facingMode: 'user' } };
+                    currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    videoEl.srcObject = currentStream;
+                    
+                    notificationView.classList.remove('active');
+                    cameraView.classList.add('active');
+                    modal.classList.add('visible');
+                } catch (err) {
+                    console.error("Camera access denied:", err);
+                    showNotificationModal('Camera Error', 'Could not access the camera. Please check your browser permissions.');
+                }
+            }
+
+            /**
+             * Captures a photo from the video stream.
+             */
+            function takePhoto() {
+                const context = canvasEl.getContext('2d');
+                canvasEl.width = videoEl.videoWidth;
+                canvasEl.height = videoEl.videoHeight;
+                
+                context.translate(canvasEl.width, 0);
+                context.scale(-1, 1);
+                
+                context.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+
+                const imageDataURL = canvasEl.toDataURL('image/jpeg');
+                const player = userTeam.find(p => p.id === currentPlayerIdForPhoto);
+                if (player) {
+                    player.image = imageDataURL;
+                }
+                
+                saveTeam(); // Save after taking photo
+                hideModal();
+                renderTeam();
+            }
+
+            // --- EVENT LISTENERS ---
+            modalCloseBtn.addEventListener('click', hideModal);
+            cancelBtn.addEventListener('click', hideModal);
+            captureBtn.addEventListener('click', takePhoto);
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    hideModal();
+                }
+            });
+
+            footyField.addEventListener('click', (event) => {
+                const tradeBtn = event.target.closest('.trade-btn');
+                const cameraBtn = event.target.closest('.camera-btn');
+
+                if (tradeBtn) {
+                    const playerId = parseInt(tradeBtn.dataset.playerId, 10);
+                    handleTrade(playerId);
+                } else if (cameraBtn) {
+                    const playerId = parseInt(cameraBtn.dataset.playerId, 10);
+                    startCamera(playerId);
+                }
+            });
+
+            resetScoresBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to reset all player scores to zero? This cannot be undone.')) {
+                    userTeam.forEach(player => player.points = 0);
+                    saveTeam();
+                    renderTeam();
+                    showNotificationModal('Scores Reset', 'All player scores have been set back to zero.');
+                }
+            });
+
+            // --- INITIALIZATION ---
+            loadTeam();
+            renderTeam();
+        });
+    </script>
+</body>
+</html>
