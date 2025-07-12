@@ -1049,7 +1049,14 @@
             async function initialize() {
                 try {
                     // Use the globally provided firebase config
-                    const firebaseConfig = JSON.parse(__firebase_config);
+                   const firebaseConfig = {
+  apiKey: "AIzaSyASPRZkzieEbk3H4NyZHYvhSM0X2WZ_ZPk",
+  authDomain: "auskick-supercoach.firebaseapp.com",
+  projectId: "auskick-supercoach",
+  storageBucket: "auskick-supercoach.firebasestorage.app",
+  messagingSenderId: "1091558293121",
+  appId: "1:1091558293121:web:c226813c3a3afc3c449780"
+};
                     const app = initializeApp(firebaseConfig);
                     db = getFirestore(app);
                     auth = getAuth(app);
