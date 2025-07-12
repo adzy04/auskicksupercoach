@@ -440,10 +440,10 @@
         }
 
         /* Modal content sections */
-        .notification-view, .camera-view {
+        .notification-view, .camera-view, .confirm-view {
             display: none;
         }
-        .notification-view.active, .camera-view.active {
+        .notification-view.active, .camera-view.active, .confirm-view.active {
             display: block;
         }
 
@@ -458,6 +458,13 @@
             margin-bottom: 1.5rem;
             line-height: 1.5;
         }
+        
+        .confirm-controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
 
         /* --- Camera View Styles --- */
         #camera-stream {
@@ -548,7 +555,6 @@
                     <li>Yarragon Yetis</li>
                 </ol>
             </div>
-            <!-- NEW: Top Players Widget -->
             <div class="top-players widget">
                 <h3>🌟 Top Players</h3>
                 <ol id="top-players-list">
@@ -592,16 +598,35 @@
                     <button id="cancel-btn">Cancel</button>
                 </div>
             </div>
+            <div id="confirm-view" class="confirm-view">
+                <h2 id="confirm-title">Are you sure?</h2>
+                <p id="confirm-message">This action cannot be undone.</p>
+                <div class="confirm-controls">
+                    <button id="confirm-yes-btn" class="danger-btn">Yes, Proceed</button>
+                    <button id="confirm-no-btn">Cancel</button>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import functions from the Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, getDocs, onSnapshot, writeBatch, updateDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // --- FIREBASE SETUP ---
+            let db, auth;
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'drouin-auskick-supercoach';
+            const playersCollectionPath = `/artifacts/${appId}/public/data/players`;
+            const tradePoolCollectionPath = `/artifacts/${appId}/public/data/tradePool`;
+
             // --- CONSTANTS ---
             const SALARY_CAP = 1000000;
 
-            // --- DATA ---
+            // --- DATA (LOCAL STATE) ---
             const TEAMS = {
                 'Adelaide': { primary: '#002B5C', secondary: '#E21937', third: '#FFD200', design: 'hoops' },
                 'Brisbane': { primary: '#A30046', secondary: '#0055A3', third: '#FDBE57', design: 'solid' },
@@ -641,9 +666,8 @@
                 { id: 15, name: 'T. Greene', team: 'GWS', position: 'Forward', skill: 'Match Winner', points: 66, price: 83, posClass: 'pos-fwd', image: null },
                 { id: 16, name: 'J. Sinclair', team: 'St Kilda', position: 'Defender', skill: 'Run & Gun', points: 100, price: 68, posClass: 'pos-def', image: null },
             ];
-
-            let userTeam = [];
-            let tradePool = [
+            
+            const defaultTradePool = [
                  { id: 17, name: 'Z. Butters', team: 'Port Adelaide', position: 'Midfielder', skill: 'Class Act', points: 100, price: 92, posClass: 'pos-mid', image: null },
                 { id: 18, name: 'H. McKay', team: 'Carlton', position: 'Forward', skill: 'Big Harry', points: 200, price: 75, posClass: 'pos-fwd', image: null },
                 { id: 19, name: 'S. Walsh', team: 'Carlton', position: 'Midfielder', skill: 'Endurance', points: 198, price: 85, posClass: 'pos-mid', image: null },
@@ -651,7 +675,9 @@
                 { id: 21, name: 'I. Heeney', team: 'Sydney', position: 'Forward', skill: 'Star Power', points: 87, price: 81, posClass: 'pos-fwd', image: null },
                 { id: 22, name: 'C. Rozee', team: 'Port Adelaide', position: 'Midfielder', skill: 'Electric', points: 77, price: 89, posClass: 'pos-mid', image: null },
             ];
-            
+
+            let userTeam = [];
+            let tradePool = [];
             let currentStream = null;
             let currentPlayerIdForPhoto = null;
 
@@ -660,10 +686,11 @@
             const totalPointsEl = document.getElementById('total-points');
             const teamSalaryEl = document.getElementById('team-salary');
             const salaryCapEl = document.getElementById('salary-cap');
-            const topPlayersList = document.getElementById('top-players-list'); // NEW
+            const topPlayersList = document.getElementById('top-players-list');
             const modal = document.getElementById('notification-modal');
             const notificationView = document.getElementById('notification-view');
             const cameraView = document.getElementById('camera-view');
+            const confirmView = document.getElementById('confirm-view');
             const modalTitle = document.getElementById('modal-title');
             const modalMessage = document.getElementById('modal-message');
             const modalCloseBtn = document.getElementById('modal-close-btn');
@@ -672,26 +699,39 @@
             const captureBtn = document.getElementById('capture-btn');
             const cancelBtn = document.getElementById('cancel-btn');
             const resetScoresBtn = document.getElementById('reset-scores-btn');
+            const confirmTitle = document.getElementById('confirm-title');
+            const confirmMessage = document.getElementById('confirm-message');
+            const confirmYesBtn = document.getElementById('confirm-yes-btn');
+            const confirmNoBtn = document.getElementById('confirm-no-btn');
 
 
             // --- FUNCTIONS ---
+
+            /**
+             * Seeds the database with the default team and trade pool if it's empty.
+             */
+            async function seedDatabase() {
+                console.log("Database is empty. Seeding with default data...");
+                const batch = writeBatch(db);
+
+                // Seed players
+                const playersRef = collection(db, playersCollectionPath);
+                defaultTeam.forEach(player => {
+                    const playerDocRef = doc(playersRef, player.id.toString());
+                    batch.set(playerDocRef, player);
+                });
+
+                // Seed trade pool
+                const tradePoolRef = collection(db, tradePoolCollectionPath);
+                 defaultTradePool.forEach(player => {
+                    const playerDocRef = doc(tradePoolRef, player.id.toString());
+                    batch.set(playerDocRef, player);
+                });
+
+                await batch.commit();
+                console.log("Database seeded successfully.");
+            }
             
-            /**
-            * Saves the current user team to local storage.
-            */
-            function saveTeam() {
-                localStorage.setItem('userTeam', JSON.stringify(userTeam));
-            }
-
-            /**
-            * Loads the user team from local storage or sets a default.
-            */
-            function loadTeam() {
-                const savedTeam = localStorage.getItem('userTeam');
-                userTeam = savedTeam ? JSON.parse(savedTeam) : defaultTeam;
-                saveTeam(); // Save the default team if it's the first time
-            }
-
             /**
              * Generates the background style for a guernsey based on team design.
              */
@@ -723,11 +763,15 @@
              * Renders the player cards and updates all team info displays.
              */
             function renderTeam() {
+                if (!userTeam) return;
                 footyField.innerHTML = ''; 
                 let currentTotalPoints = 0;
                 let currentTeamSalary = 0;
 
-                userTeam.forEach(player => {
+                // Sort team by ID to ensure consistent order
+                const sortedTeam = [...userTeam].sort((a, b) => a.id - b.id);
+
+                sortedTeam.forEach(player => {
                     currentTotalPoints += player.points;
                     currentTeamSalary += player.price;
 
@@ -760,25 +804,21 @@
                 // Update displays
                 totalPointsEl.textContent = Math.round(currentTotalPoints);
                 teamSalaryEl.textContent = currentTeamSalary.toFixed(1);
-                salaryCapEl.textContent = SALARY_CAP;
+                salaryCapEl.textContent = SALARY_CAP / 1000;
                 
-                // --- NEW: Render Top Players List ---
                 renderTopPlayers();
             }
             
             /**
-             * NEW: Renders the top players list in the sidebar.
+             * Renders the top players list in the sidebar.
              */
             function renderTopPlayers() {
-                topPlayersList.innerHTML = ''; // Clear existing list
+                topPlayersList.innerHTML = ''; 
                 
-                // Create a sorted copy of the team by points
                 const sortedPlayers = [...userTeam].sort((a, b) => b.points - a.points);
-                
-                // Get the top 5 players
                 const topFive = sortedPlayers.slice(0, 5);
                 
-                if (topFive.length === 0 || topFive[0].points === 0) {
+                if (topFive.length === 0 || topFive.every(p => p.points === 0)) {
                      topPlayersList.innerHTML = '<li>No points scored yet!</li>';
                      return;
                 }
@@ -793,51 +833,103 @@
             }
 
             /**
-             * Handles the logic for trading a player, including salary cap check.
+             * Handles the logic for trading a player.
              */
-            function handleTrade(playerIdToTrade) {
+            async function handleTrade(playerIdToTrade) {
                 if (tradePool.length === 0) {
                     showNotificationModal('Trade Failed', 'There are no more players available to trade!');
                     return;
                 }
 
-                const playerOutIndex = userTeam.findIndex(p => p.id === playerIdToTrade);
-                if (playerOutIndex === -1) return;
+                const playerOut = userTeam.find(p => p.id === playerIdToTrade);
+                if (!playerOut) return;
 
-                const playerOut = userTeam[playerOutIndex];
                 const currentSalary = userTeam.reduce((total, p) => total + p.price, 0);
                 const salaryAfterTradeOut = currentSalary - playerOut.price;
 
-                const newPlayerIndex = Math.floor(Math.random() * tradePool.length);
-                const newPlayer = tradePool[newPlayerIndex];
+                const playerIn = tradePool[Math.floor(Math.random() * tradePool.length)];
 
-                if (salaryAfterTradeOut + newPlayer.price > SALARY_CAP) {
-                    showNotificationModal('Trade Denied!', `You can't afford <strong>${newPlayer.name}</strong>. You need to free up more cash!`);
+                if (salaryAfterTradeOut + playerIn.price > SALARY_CAP) {
+                    showNotificationModal('Trade Denied!', `You can't afford <strong>${playerIn.name}</strong>. You need to free up more cash!`);
                     return;
                 }
                 
-                newPlayer.points = 0;
+                // Set incoming player points to 0 for a fresh start
+                const tradedPlayerInData = {...playerIn, points: 0};
 
-                userTeam[playerOutIndex] = newPlayer;
-                tradePool.splice(newPlayerIndex, 1);
-                tradePool.push(playerOut);
-                
-                saveTeam(); // Save after trade
-                renderTeam();
-                showNotificationModal('Trade Successful!', `You traded <strong>${playerOut.name}</strong> for <strong>${newPlayer.name}</strong>!`);
+                try {
+                    const batch = writeBatch(db);
+
+                    // 1. Remove playerOut from 'players' collection
+                    const playerOutRef = doc(db, playersCollectionPath, playerOut.id.toString());
+                    batch.delete(playerOutRef);
+
+                    // 2. Remove playerIn from 'tradePool' collection
+                    const playerInRef = doc(db, tradePoolCollectionPath, playerIn.id.toString());
+                    batch.delete(playerInRef);
+
+                    // 3. Add playerIn to 'players' collection
+                    const newPlayerRef = doc(db, playersCollectionPath, playerIn.id.toString());
+                    batch.set(newPlayerRef, tradedPlayerInData);
+
+                    // 4. Add playerOut to 'tradePool' collection
+                    const newTradePoolPlayerRef = doc(db, tradePoolCollectionPath, playerOut.id.toString());
+                    batch.set(newTradePoolPlayerRef, playerOut);
+
+                    await batch.commit();
+                    
+                    showNotificationModal('Trade Successful!', `You traded <strong>${playerOut.name}</strong> for <strong>${playerIn.name}</strong>!`);
+                    // The onSnapshot listener will automatically re-render the team.
+                } catch (error) {
+                    console.error("Error during trade: ", error);
+                    showNotificationModal('Trade Error', 'Something went wrong with the trade. Please try again.');
+                }
             }
             
             /**
-             * Shows the notification modal.
+             * Shows a modal. Can be 'notification', 'camera', or 'confirm'.
              */
-            function showNotificationModal(title, message) {
+            function showModal(type, options = {}) {
+                // Hide all views first
+                notificationView.classList.remove('active');
                 cameraView.classList.remove('active');
-                notificationView.classList.add('active');
-                modalTitle.textContent = title;
-                modalMessage.innerHTML = message;
+                confirmView.classList.remove('active');
+
+                if (type === 'notification') {
+                    modalTitle.textContent = options.title || 'Notification';
+                    modalMessage.innerHTML = options.message || '';
+                    notificationView.classList.add('active');
+                } else if (type === 'camera') {
+                    cameraView.classList.add('active');
+                } else if (type === 'confirm') {
+                    confirmTitle.textContent = options.title || 'Are you sure?';
+                    confirmMessage.innerHTML = options.message || 'This action cannot be undone.';
+                    confirmView.classList.add('active');
+                    
+                    // One-time event listeners for confirm buttons
+                    const yesHandler = () => {
+                        hideModal();
+                        if(options.onConfirm) options.onConfirm();
+                        confirmYesBtn.removeEventListener('click', yesHandler);
+                        confirmNoBtn.removeEventListener('click', noHandler);
+                    };
+                    const noHandler = () => {
+                        hideModal();
+                        if(options.onCancel) options.onCancel();
+                        confirmYesBtn.removeEventListener('click', yesHandler);
+                        confirmNoBtn.removeEventListener('click', noHandler);
+                    };
+
+                    confirmYesBtn.addEventListener('click', yesHandler);
+                    confirmNoBtn.addEventListener('click', noHandler);
+                }
+                
                 modal.classList.add('visible');
             }
 
+            // Simplified wrappers for showModal
+            const showNotificationModal = (title, message) => showModal('notification', { title, message });
+            
             /**
              * Stops any active camera stream.
              */
@@ -871,10 +963,7 @@
                     const constraints = { video: { facingMode: 'user' } };
                     currentStream = await navigator.mediaDevices.getUserMedia(constraints);
                     videoEl.srcObject = currentStream;
-                    
-                    notificationView.classList.remove('active');
-                    cameraView.classList.add('active');
-                    modal.classList.add('visible');
+                    showModal('camera');
                 } catch (err) {
                     console.error("Camera access denied:", err);
                     showNotificationModal('Camera Error', 'Could not access the camera. Please check your browser permissions.');
@@ -882,28 +971,45 @@
             }
 
             /**
-             * Captures a photo from the video stream.
+             * Captures a photo from the video stream and saves to Firestore.
              */
-            function takePhoto() {
+            async function takePhoto() {
                 const context = canvasEl.getContext('2d');
                 canvasEl.width = videoEl.videoWidth;
                 canvasEl.height = videoEl.videoHeight;
                 
-                // Flip the image horizontally to correct the mirror effect
                 context.translate(canvasEl.width, 0);
                 context.scale(-1, 1);
                 
                 context.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
 
                 const imageDataURL = canvasEl.toDataURL('image/jpeg');
-                const player = userTeam.find(p => p.id === currentPlayerIdForPhoto);
-                if (player) {
-                    player.image = imageDataURL;
-                }
                 
-                saveTeam(); // Save after taking photo
                 hideModal();
-                renderTeam();
+                
+                try {
+                    const playerRef = doc(db, playersCollectionPath, currentPlayerIdForPhoto.toString());
+                    await updateDoc(playerRef, { image: imageDataURL });
+                    // onSnapshot will handle re-render
+                } catch (error) {
+                    console.error("Error saving photo: ", error);
+                    showNotificationModal('Save Error', 'Could not save the new photo.');
+                }
+            }
+            
+            /**
+             * Resets all player scores to 0 in Firestore.
+             */
+            async function resetAllScores() {
+                console.log("Resetting all scores...");
+                const batch = writeBatch(db);
+                userTeam.forEach(player => {
+                    const playerRef = doc(db, playersCollectionPath, player.id.toString());
+                    batch.update(playerRef, { points: 0 });
+                });
+                await batch.commit();
+                showNotificationModal('Scores Reset', 'All player scores have been set back to zero.');
+                // onSnapshot will handle re-render
             }
 
             // --- EVENT LISTENERS ---
@@ -915,6 +1021,8 @@
                     hideModal();
                 }
             });
+            confirmNoBtn.addEventListener('click', hideModal);
+
 
             footyField.addEventListener('click', (event) => {
                 const tradeBtn = event.target.closest('.trade-btn');
@@ -930,19 +1038,60 @@
             });
 
             resetScoresBtn.addEventListener('click', () => {
-                // Replaced confirm() with a custom modal for better UX, but for simplicity, keeping confirm() here.
-                // In a real app, you would build a custom confirmation modal.
-                if (confirm('Are you sure you want to reset all player scores to zero? This cannot be undone.')) {
-                    userTeam.forEach(player => player.points = 0);
-                    saveTeam();
-                    renderTeam();
-                    showNotificationModal('Scores Reset', 'All player scores have been set back to zero.');
-                }
+                showModal('confirm', {
+                    title: 'Reset Scores?',
+                    message: 'Are you sure you want to reset all player scores to zero? This cannot be undone.',
+                    onConfirm: resetAllScores
+                });
             });
 
             // --- INITIALIZATION ---
-            loadTeam();
-            renderTeam();
+            async function initialize() {
+                try {
+                    // Use the globally provided firebase config
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    
+                    // Enable extensive logging for debugging
+                    setLogLevel('debug');
+
+                    // Sign in the user
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                        console.log("Signed in with custom token.");
+                    } else {
+                        await signInAnonymously(auth);
+                        console.log("Signed in anonymously.");
+                    }
+                    
+                    // Check if DB is empty and seed if necessary
+                    const playersRef = collection(db, playersCollectionPath);
+                    const initialSnapshot = await getDocs(playersRef);
+                    if (initialSnapshot.empty) {
+                        await seedDatabase();
+                    }
+
+                    // Set up real-time listeners
+                    onSnapshot(collection(db, playersCollectionPath), (snapshot) => {
+                        console.log("Received player data update.");
+                        userTeam = snapshot.docs.map(doc => doc.data());
+                        renderTeam();
+                    });
+
+                    onSnapshot(collection(db, tradePoolCollectionPath), (snapshot) => {
+                        console.log("Received trade pool update.");
+                        tradePool = snapshot.docs.map(doc => doc.data());
+                    });
+
+                } catch (error) {
+                    console.error("Firebase initialization failed:", error);
+                    footyField.innerHTML = `<p style="color: red; text-align: center;">Error connecting to the database. Please refresh the page.</p>`;
+                }
+            }
+
+            initialize();
         });
     </script>
 </body>
