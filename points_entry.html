@@ -89,7 +89,7 @@
             background-color: #dbeaff;
             border-color: var(--accent-color);
         }
-        .player-item img {
+        .player-item img, .player-item .guernsey-icon-small {
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -139,6 +139,10 @@
         }
         .action-btn:hover { background-color: #ced4da; }
         .action-btn:active { transform: scale(0.98); }
+        .action-btn.disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
         .action-points {
             font-weight: 700;
             font-size: 1.1rem;
@@ -171,6 +175,28 @@
         .action-btn.possession { background-color: #fff9db; }
         .action-btn.defence { background-color: #ffdbdb; }
 
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center;
+            align-items: center; opacity: 0; visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease; z-index: 1000;
+        }
+        .modal-overlay.visible { opacity: 1; visibility: visible; }
+        .modal-content {
+            background: var(--white-color); padding: 2rem; border-radius: 20px;
+            width: 90%; max-width: 400px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        .modal-overlay.visible .modal-content { transform: scale(1); }
+        .notification-view, .confirm-view { display: none; }
+        .notification-view.active, .confirm-view.active { display: block; }
+        .modal-content h2 { color: var(--accent-color); margin-top: 0; font-size: 1.8rem; }
+        .modal-content p { font-size: 1.1rem; margin-bottom: 1.5rem; line-height: 1.5; }
+        .confirm-controls { display: flex; gap: 1rem; justify-content: center; }
+        #modal-close-btn { background-color: var(--accent-color); color: var(--white-color); border:none; border-radius: 10px; padding: 0.5rem 1rem; cursor: pointer; }
+
     </style>
 </head>
 <body>
@@ -182,23 +208,65 @@
         <div class="player-list-container">
             <h2>Select Player</h2>
             <div id="player-list">
-                </div>
+                <p>Loading players...</p>
+            </div>
         </div>
         <div class="scoring-panel">
             <h2>Award Points</h2>
             <div id="actions-grid" class="actions-grid">
-                </div>
+                <!-- Action buttons will be rendered here -->
+            </div>
             <hr style="margin: 1.5rem 0 1rem 0; border: 1px solid var(--background-color); border-top: none;">
             <button id="reset-scores-btn" class="danger-btn">Reset All Scores</button>
         </div>
     </main>
 
-    <script>
+    <div id="notification-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="notification-view" class="notification-view active">
+                <h2 id="modal-title">Notification</h2>
+                <p id="modal-message"></p>
+                <button id="modal-close-btn">OK</button>
+            </div>
+            <div id="confirm-view" class="confirm-view">
+                <h2 id="confirm-title">Are you sure?</h2>
+                <p id="confirm-message">This action cannot be undone.</p>
+                <div class="confirm-controls">
+                    <button id="confirm-yes-btn" class="danger-btn">Yes, Proceed</button>
+                    <button id="confirm-no-btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, updateDoc, increment, writeBatch, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         document.addEventListener('DOMContentLoaded', () => {
+            // --- FIREBASE SETUP ---
+            let db;
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'drouin-auskick-supercoach';
+            const playersCollectionPath = `/artifacts/${appId}/public/data/players`;
+
+            // --- ELEMENTS ---
             const playerListEl = document.getElementById('player-list');
             const actionsGridEl = document.getElementById('actions-grid');
             const resetScoresBtn = document.getElementById('reset-scores-btn');
+            const modal = document.getElementById('notification-modal');
+            const notificationView = document.getElementById('notification-view');
+            const confirmView = document.getElementById('confirm-view');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+            const confirmTitle = document.getElementById('confirm-title');
+            const confirmMessage = document.getElementById('confirm-message');
+            const confirmYesBtn = document.getElementById('confirm-yes-btn');
+            const confirmNoBtn = document.getElementById('confirm-no-btn');
             
+            // --- LOCAL STATE ---
             let userTeam = [];
             let selectedPlayerId = null;
 
@@ -223,22 +291,52 @@
                 { name: 'Hit Out to Advantage', points: 5, cat: 'goal' }
             ];
 
-            function loadTeam() {
-                const savedTeam = localStorage.getItem('userTeam');
-                if (savedTeam) {
-                    userTeam = JSON.parse(savedTeam);
-                } else {
-                    playerListEl.innerHTML = '<p>No team data found. Please set up your team on the main page first.</p>';
+            // --- MODAL FUNCTIONS ---
+            function showModal(type, options = {}) {
+                notificationView.classList.remove('active');
+                confirmView.classList.remove('active');
+
+                if (type === 'notification') {
+                    modalTitle.textContent = options.title || 'Notification';
+                    modalMessage.innerHTML = options.message || '';
+                    notificationView.classList.add('active');
+                } else if (type === 'confirm') {
+                    confirmTitle.textContent = options.title || 'Are you sure?';
+                    confirmMessage.innerHTML = options.message || 'This action cannot be undone.';
+                    confirmView.classList.add('active');
+                    
+                    const yesHandler = () => {
+                        hideModal();
+                        if(options.onConfirm) options.onConfirm();
+                        confirmYesBtn.removeEventListener('click', yesHandler);
+                        confirmNoBtn.removeEventListener('click', noHandler);
+                    };
+                    const noHandler = () => {
+                        hideModal();
+                        if(options.onCancel) options.onCancel();
+                        confirmYesBtn.removeEventListener('click', yesHandler);
+                        confirmNoBtn.removeEventListener('click', noHandler);
+                    };
+
+                    confirmYesBtn.addEventListener('click', yesHandler);
+                    confirmNoBtn.addEventListener('click', noHandler);
                 }
+                modal.classList.add('visible');
             }
+            const showNotificationModal = (title, message) => showModal('notification', { title, message });
+            function hideModal() { modal.classList.remove('visible'); }
 
-            function saveTeam() {
-                localStorage.setItem('userTeam', JSON.stringify(userTeam));
-            }
-
+            // --- RENDER FUNCTIONS ---
             function renderPlayerList() {
                 playerListEl.innerHTML = '';
-                userTeam.sort((a,b) => a.name.localeCompare(b.name)).forEach(player => {
+                const sortedTeam = [...userTeam].sort((a,b) => a.name.localeCompare(b.name));
+                
+                if (sortedTeam.length === 0) {
+                    playerListEl.innerHTML = '<p>No players found in the team.</p>';
+                    return;
+                }
+
+                sortedTeam.forEach(player => {
                     const playerEl = document.createElement('div');
                     playerEl.className = 'player-item';
                     playerEl.dataset.playerId = player.id;
@@ -246,11 +344,11 @@
                         playerEl.classList.add('selected');
                     }
 
-                    // Use a placeholder for null images to maintain layout
-                    const imgSrc = player.image || 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+                    const localImage = localStorage.getItem(`player_photo_${player.id}`);
+                    const profileImage = localImage ? `<img src="${localImage}" alt="Player photo">` : `<div class="guernsey-icon-small"></div>`;
 
                     playerEl.innerHTML = `
-                        <img src="${imgSrc}" alt="Player photo">
+                        ${profileImage}
                         <div class="player-info">
                             <div class="player-name">${player.name}</div>
                             <div class="player-team">${player.team}</div>
@@ -259,9 +357,8 @@
                     `;
                     playerEl.addEventListener('click', () => {
                         selectedPlayerId = player.id;
-                        // Re-render to update selection highlight
-                        document.querySelectorAll('.player-item').forEach(el => el.classList.remove('selected'));
-                        playerEl.classList.add('selected');
+                        renderPlayerList(); // Re-render to update selection
+                        renderActionButtons(); // Re-render buttons to enable them
                     });
                     playerListEl.appendChild(playerEl);
                 });
@@ -269,6 +366,8 @@
 
             function renderActionButtons() {
                 actionsGridEl.innerHTML = '';
+                const isPlayerSelected = selectedPlayerId !== null;
+
                 scoringActions.forEach(action => {
                     const btn = document.createElement('button');
                     btn.className = `action-btn ${action.cat}`;
@@ -277,36 +376,88 @@
                         <span>${action.name}</span>
                         <span class="action-points">+${action.points}</span>
                     `;
-                    btn.addEventListener('click', () => {
-                        if (selectedPlayerId === null) {
-                            alert('Please select a player first!');
-                            return;
-                        }
-                        const player = userTeam.find(p => p.id === selectedPlayerId);
-                        if(player) {
-                            player.points += action.points;
-                            document.getElementById(`points-for-${player.id}`).textContent = Math.round(player.points);
-                            saveTeam();
+
+                    if (!isPlayerSelected) {
+                        btn.classList.add('disabled');
+                        btn.disabled = true;
+                    }
+
+                    btn.addEventListener('click', async () => {
+                        if (!selectedPlayerId) return;
+                        try {
+                            const playerRef = doc(db, playersCollectionPath, selectedPlayerId.toString());
+                            await updateDoc(playerRef, {
+                                points: increment(action.points)
+                            });
+                        } catch (error) {
+                            console.error("Error updating points: ", error);
+                            showNotificationModal("Error", "Could not save the new score.");
                         }
                     });
                     actionsGridEl.appendChild(btn);
                 });
             }
 
-            resetScoresBtn.addEventListener('click', () => {
-                if (confirm('Are you sure you want to reset all player scores to zero? This cannot be undone.')) {
-                    userTeam.forEach(player => player.points = 0);
-                    saveTeam();
-                    renderPlayerList();
-                    alert('All player scores have been set back to zero.');
+            // --- DATABASE FUNCTIONS ---
+            async function resetAllScores() {
+                console.log("Resetting all scores...");
+                const batch = writeBatch(db);
+                userTeam.forEach(player => {
+                    const playerRef = doc(db, playersCollectionPath, player.id.toString());
+                    batch.update(playerRef, { points: 0 });
+                });
+                try {
+                    await batch.commit();
+                    showNotificationModal('Scores Reset', 'All player scores have been set back to zero.');
+                } catch (error) {
+                    console.error("Error resetting scores: ", error);
+                    showNotificationModal("Error", "Could not reset scores.");
                 }
+            }
+
+            // --- EVENT LISTENERS ---
+            resetScoresBtn.addEventListener('click', () => {
+                showModal('confirm', {
+                    title: 'Reset All Scores?',
+                    message: 'Are you sure you want to reset all player scores to zero for the entire league? This cannot be undone.',
+                    onConfirm: resetAllScores
+                });
+            });
+            modalCloseBtn.addEventListener('click', hideModal);
+            confirmNoBtn.addEventListener('click', hideModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) hideModal();
             });
 
-
             // --- INITIALIZATION ---
-            loadTeam();
-            renderPlayerList();
-            renderActionButtons();
+            async function initialize() {
+                try {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    const auth = getAuth(app);
+                    setLogLevel('debug');
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    
+                    onSnapshot(collection(db, playersCollectionPath), (snapshot) => {
+                        userTeam = snapshot.docs.map(doc => doc.data());
+                        renderPlayerList();
+                    });
+
+                    renderActionButtons(); // Initial render with disabled buttons
+
+                } catch (error) {
+                    console.error("Firebase initialization failed:", error);
+                    playerListEl.innerHTML = `<p style="color: red;">Error connecting to the database. Please refresh.</p>`;
+                }
+            }
+
+            initialize();
         });
     </script>
 </body>
